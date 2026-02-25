@@ -1,0 +1,524 @@
+{
+  "info": {
+    "name": "Product API",
+    "description": "Complete CRUD + Audit collection for the Product API (Spring Boot 4 + Hibernate Envers)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{host}}:{{port}}/api/v1/products"
+    },
+    {
+      "key": "productId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "CRUD",
+      "description": "Standard Create, Read, Update, Delete operations on products.",
+      "item": [
+        {
+          "name": "Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has product id', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.id).to.be.a('number');",
+                  "    pm.collectionVariables.set('productId', json.id);",
+                  "});",
+                  "",
+                  "pm.test('Response contains all fields', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('name');",
+                  "    pm.expect(json).to.have.property('description');",
+                  "    pm.expect(json).to.have.property('price');",
+                  "    pm.expect(json).to.have.property('createdAt');",
+                  "    pm.expect(json).to.have.property('updatedAt');",
+                  "    pm.expect(json).to.have.property('createdBy');",
+                  "    pm.expect(json).to.have.property('updatedBy');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"MacBook Pro 16\\\"\",\n    \"description\": \"Apple MacBook Pro 16-inch with M3 Max chip, 36GB RAM, 1TB SSD\",\n    \"price\": 3499.99\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products"]
+            },
+            "description": "Creates a new product. Returns 201 with the created product including audit fields. Automatically saves the returned `id` to `productId` collection variable."
+          },
+          "response": [
+            {
+              "name": "201 - Product Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n    \"id\": 1,\n    \"name\": \"MacBook Pro 16\\\"\",\n    \"description\": \"Apple MacBook Pro 16-inch with M3 Max chip, 36GB RAM, 1TB SSD\",\n    \"price\": 3499.99,\n    \"createdAt\": \"2026-02-25T10:30:00Z\",\n    \"updatedAt\": \"2026-02-25T10:30:00Z\",\n    \"createdBy\": \"system\",\n    \"updatedBy\": \"system\"\n}"
+            },
+            {
+              "name": "400 - Validation Error",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                { "key": "Content-Type", "value": "application/problem+json" }
+              ],
+              "body": "{\n    \"type\": \"https://api.example.com/errors/validation\",\n    \"title\": \"Validation Error\",\n    \"status\": 400,\n    \"detail\": \"Validation failed\",\n    \"timestamp\": \"2026-02-25T10:30:00Z\",\n    \"errors\": {\n        \"name\": \"Name is required\",\n        \"price\": \"Price must be greater than zero\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Product - Minimal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"USB-C Cable\",\n    \"description\": null,\n    \"price\": 12.50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products"]
+            },
+            "description": "Creates a product with minimal fields (no description)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product - Validation Error",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"\",\n    \"description\": \"Missing name and invalid price\",\n    \"price\": -5.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products"]
+            },
+            "description": "Triggers validation errors: blank name and negative price. Expects 400 with ProblemDetail response."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Products contain audit fields', function () {",
+                  "    var json = pm.response.json();",
+                  "    if (json.length > 0) {",
+                  "        pm.expect(json[0]).to.have.property('createdBy');",
+                  "        pm.expect(json[0]).to.have.property('updatedBy');",
+                  "        pm.expect(json[0]).to.have.property('updatedAt');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products"]
+            },
+            "description": "Retrieves all products. Returns 200 with a JSON array including audit fields."
+          },
+          "response": [
+            {
+              "name": "200 - Product List",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "[\n    {\n        \"id\": 1,\n        \"name\": \"MacBook Pro 16\\\"\",\n        \"description\": \"Apple MacBook Pro 16-inch with M3 Max chip, 36GB RAM, 1TB SSD\",\n        \"price\": 3499.99,\n        \"createdAt\": \"2026-02-25T10:30:00Z\",\n        \"updatedAt\": \"2026-02-25T10:30:00Z\",\n        \"createdBy\": \"system\",\n        \"updatedBy\": \"system\"\n    },\n    {\n        \"id\": 2,\n        \"name\": \"USB-C Cable\",\n        \"description\": null,\n        \"price\": 12.50,\n        \"createdAt\": \"2026-02-25T10:31:00Z\",\n        \"updatedAt\": \"2026-02-25T10:31:00Z\",\n        \"createdBy\": \"system\",\n        \"updatedBy\": \"system\"\n    }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Product by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Product id matches', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('productId')));",
+                  "});",
+                  "",
+                  "pm.test('Audit fields are present', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.createdBy).to.be.a('string');",
+                  "    pm.expect(json.updatedBy).to.be.a('string');",
+                  "    pm.expect(json.updatedAt).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{productId}}",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products", "{{productId}}"]
+            },
+            "description": "Retrieves a single product by its ID. Returns 200 or 404 if not found."
+          },
+          "response": [
+            {
+              "name": "200 - Product Found",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n    \"id\": 1,\n    \"name\": \"MacBook Pro 16\\\"\",\n    \"description\": \"Apple MacBook Pro 16-inch with M3 Max chip, 36GB RAM, 1TB SSD\",\n    \"price\": 3499.99,\n    \"createdAt\": \"2026-02-25T10:30:00Z\",\n    \"updatedAt\": \"2026-02-25T10:30:00Z\",\n    \"createdBy\": \"system\",\n    \"updatedBy\": \"system\"\n}"
+            },
+            {
+              "name": "404 - Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/problem+json" }
+              ],
+              "body": "{\n    \"type\": \"https://api.example.com/errors/not-found\",\n    \"title\": \"Resource Not Found\",\n    \"status\": 404,\n    \"detail\": \"Product not found with id: 999\",\n    \"timestamp\": \"2026-02-25T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Product - Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/999",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products", "999"]
+            },
+            "description": "Attempts to fetch a non-existent product. Expects 404 ProblemDetail response."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Product name is updated', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.name).to.eql('MacBook Pro 14\"');",
+                  "});",
+                  "",
+                  "pm.test('updatedAt changed', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.updatedAt).to.not.eql(json.createdAt);",
+                  "});",
+                  "",
+                  "pm.test('updatedBy is present', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.updatedBy).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"MacBook Pro 14\\\"\",\n    \"description\": \"Apple MacBook Pro 14-inch with M3 Pro chip, 18GB RAM, 512GB SSD\",\n    \"price\": 1999.99\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{productId}}",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products", "{{productId}}"]
+            },
+            "description": "Updates an existing product by ID. Returns 200 with the updated product. The updatedAt and updatedBy audit fields will reflect the change."
+          },
+          "response": [
+            {
+              "name": "200 - Product Updated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n    \"id\": 1,\n    \"name\": \"MacBook Pro 14\\\"\",\n    \"description\": \"Apple MacBook Pro 14-inch with M3 Pro chip, 18GB RAM, 512GB SSD\",\n    \"price\": 1999.99,\n    \"createdAt\": \"2026-02-25T10:30:00Z\",\n    \"updatedAt\": \"2026-02-25T10:35:00Z\",\n    \"createdBy\": \"system\",\n    \"updatedBy\": \"system\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{productId}}",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products", "{{productId}}"]
+            },
+            "description": "Deletes a product by ID. Returns 204 No Content on success. Envers stores a DEL revision snapshot in the audit table."
+          },
+          "response": [
+            {
+              "name": "204 - Product Deleted",
+              "status": "No Content",
+              "code": 204,
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Audit / Revisions",
+      "description": "Hibernate Envers revision history endpoints.",
+      "item": [
+        {
+          "name": "Get Product Revisions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is a paginated result', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "    pm.expect(json).to.have.property('totalPages');",
+                  "    pm.expect(json).to.have.property('number');",
+                  "});",
+                  "",
+                  "pm.test('Revisions contain expected fields', function () {",
+                  "    var json = pm.response.json();",
+                  "    if (json.content.length > 0) {",
+                  "        var rev = json.content[0];",
+                  "        pm.expect(rev).to.have.property('revisionNumber');",
+                  "        pm.expect(rev).to.have.property('revisionType');",
+                  "        pm.expect(rev).to.have.property('revisionTimestamp');",
+                  "        pm.expect(rev).to.have.property('product');",
+                  "        pm.expect(['ADD', 'MOD', 'DEL']).to.include(rev.revisionType);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{productId}}/revisions?page=0&size=20",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products", "{{productId}}", "revisions"],
+              "query": [
+                { "key": "page", "value": "0", "description": "Page number (0-based)" },
+                { "key": "size", "value": "20", "description": "Page size" }
+              ]
+            },
+            "description": "Retrieves the paginated audit revision history for a specific product. Each revision includes the revision number, type (ADD/MOD/DEL), timestamp, and a full product snapshot at that point in time."
+          },
+          "response": [
+            {
+              "name": "200 - Revisions Found",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n    \"content\": [\n        {\n            \"revisionNumber\": 2,\n            \"revisionType\": \"MOD\",\n            \"revisionTimestamp\": \"2026-02-25T10:35:00Z\",\n            \"product\": {\n                \"id\": 1,\n                \"name\": \"MacBook Pro 14\\\"\",\n                \"description\": \"Apple MacBook Pro 14-inch with M3 Pro chip, 18GB RAM, 512GB SSD\",\n                \"price\": 1999.99,\n                \"createdAt\": \"2026-02-25T10:30:00Z\",\n                \"updatedAt\": \"2026-02-25T10:35:00Z\",\n                \"createdBy\": \"system\",\n                \"updatedBy\": \"system\"\n            }\n        },\n        {\n            \"revisionNumber\": 1,\n            \"revisionType\": \"ADD\",\n            \"revisionTimestamp\": \"2026-02-25T10:30:00Z\",\n            \"product\": {\n                \"id\": 1,\n                \"name\": \"MacBook Pro 16\\\"\",\n                \"description\": \"Apple MacBook Pro 16-inch with M3 Max chip, 36GB RAM, 1TB SSD\",\n                \"price\": 3499.99,\n                \"createdAt\": \"2026-02-25T10:30:00Z\",\n                \"updatedAt\": \"2026-02-25T10:30:00Z\",\n                \"createdBy\": \"system\",\n                \"updatedBy\": \"system\"\n            }\n        }\n    ],\n    \"totalElements\": 2,\n    \"totalPages\": 1,\n    \"size\": 20,\n    \"number\": 0\n}"
+            },
+            {
+              "name": "404 - Product Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/problem+json" }
+              ],
+              "body": "{\n    \"type\": \"https://api.example.com/errors/not-found\",\n    \"title\": \"Resource Not Found\",\n    \"status\": 404,\n    \"detail\": \"Product not found with id: 999\",\n    \"timestamp\": \"2026-02-25T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Product Revisions - Page 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{productId}}/revisions?page=1&size=5",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products", "{{productId}}", "revisions"],
+              "query": [
+                { "key": "page", "value": "1", "description": "Second page" },
+                { "key": "size", "value": "5", "description": "5 revisions per page" }
+              ]
+            },
+            "description": "Fetches the second page of revisions with a smaller page size. Useful for testing pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Revisions - Product Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/999/revisions?page=0&size=20",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["api", "v1", "products", "999", "revisions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Attempts to fetch revisions for a non-existent product. Expects 404."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "description": "Spring Actuator health endpoints.",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Status is UP', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}:{{port}}/actuator/health",
+              "host": ["{{host}}"],
+              "port": "{{port}}",
+              "path": ["actuator", "health"]
+            },
+            "description": "Checks the application health via Spring Actuator."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
