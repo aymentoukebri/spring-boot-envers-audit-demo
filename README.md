@@ -1,4 +1,4 @@
-# Product API
+# Spring Boot Envers Audit Demo
 
 Production-ready REST API built with **Spring Boot 4**, **Java 21**, and **PostgreSQL**.
 Features full CRUD operations, Hibernate Envers audit trail, and event-driven revision notifications.
@@ -316,7 +316,7 @@ Import the files from `postman/` into Postman:
 ## Project Structure
 
 ```
-spring-crud-claude/
+spring-boot-envers-audit-demo/
 ├── pom.xml
 ├── Dockerfile
 ├── docker-compose.yml
