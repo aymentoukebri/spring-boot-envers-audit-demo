@@ -281,7 +281,6 @@ public void onRevision(RevisionEvent event) {
 @Entity
 @Audited
 public class Order extends AbstractAuditableEntity {
-    // your fields — auditing + notifications work automatically
 }
 ```
 
